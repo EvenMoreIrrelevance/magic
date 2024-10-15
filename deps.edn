@@ -1,6 +1,6 @@
 {:deps 
- {org.clojure/clojure {:mvn/version "1.12.0"}}
+ {org.clojure/clojure {:mvn/version "1.11.4"}}
  :aliases
  {:dev
   {:jvm-opts ["--enable-preview"]
-   :extra-deps {com.ginsberg/gatherers4j {:mvn/version "0.5.0"}}}}}
+   :extra-deps {criterium/criterium {:mvn/version "0.4.6"}}}}}
