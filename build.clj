@@ -46,12 +46,12 @@
 (defn install [_]
   (b/install (jar-opts {})))
 
-(def clojars-creds
-  (->
-   (edn/read-string (slurp "../clojars-credentials.edn"))
-   (as-> % (assoc % :password (get-in % [:passwords (namespace lib)])))))
-
-(alter-var-root (var deps-deploy/default-repo-settings) update "clojars" merge clojars-creds)
+(when-let [creds
+           (try (edn/read-string (slurp "../clojars-credentials.edn"))
+                (catch java.io.IOException _e nil))]
+  (alter-var-root
+   (var deps-deploy/default-repo-settings)
+   update "clojars" merge (get creds (namespace lib))))
 
 (defn dump-reader
   [src targ]
@@ -84,7 +84,7 @@
    {:artifact jar-file
     :installer :remote
     :sign-releases? false})
-  (runit ["git" "commit" "-am"])
+  (runit ["git" "commit" "-am" (str "deploy v" version)])
   (when-not (= 0 (runit ["git" "tag" (str "v" version)]))
     (throw (ex-info "version already tagged" {:version version})))
   (runit ["git" "push" "origin" "tag" (str "v" version)]))
