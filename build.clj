@@ -68,7 +68,10 @@
          p (.start (ProcessBuilder. args))
          re (future (dump-reader (.errorReader p) error))
          ri (future (dump-reader (.inputReader p) input))
-         res (try (.waitFor p) (finally (.destroy p)))]
+         res (try (loop []
+                    (or (try (.waitFor p) (catch InterruptedException _ nil))
+                        (recur)))
+                  (finally (.destroy p)))] 
      (run! deref [re ri])
      res)))
 
@@ -79,12 +82,13 @@
   (when-not (and (= 0 (runit ["git" "diff-index" "--quiet" "--cached" "HEAD" "--"]))
                  (= 0 (runit ["git" "diff-files" "--quiet"])))
     (throw (ex-info "worktree or index not clean" {})))
-  (jar _)
-  (deps-deploy/deploy
-   {:artifact jar-file
-    :installer :remote
-    :sign-releases? false})
-  (runit ["git" "commit" "-am" (str "deploy v" version)])
-  (when-not (= 0 (runit ["git" "tag" (str "v" version)]))
-    (throw (ex-info "version already tagged" {:version version})))
-  (runit ["git" "push" "origin" "tag" (str "v" version)]))
+  (let [tag (str "v" version)]
+    (when (= tag (with-out-str (runit {:input *out*} ["git" "tag" "--list" tag])))
+      (throw (ex-info "version already tagged" {:version version})))
+    (jar _)
+    (deps-deploy/deploy
+     {:artifact jar-file
+      :installer :remote
+      :sign-releases? false})
+    (runit ["git" "commit" "-am" (str "deploy " tag)])
+    (runit ["git" "push" "origin" "tag" tag])))
