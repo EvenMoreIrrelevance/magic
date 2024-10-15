@@ -95,7 +95,30 @@ and anything else is passed through xf* until needed."
             (gtake 2)
             (map #(cons :lol %)))
         [1 2 3 4 5 6 69 75])
-  
+
+  ; // TODO  
+  ; understand if we want to try and go against the default behavior
+  ; of Gatherers, which with the current design will return at the very first
+  ; reduced accumulator.
+  ; My hunch is that we should let Gatherers do their thing. It's not like
+  ; there are specifications forbidding transducers from breaking on a `reduced`
+  ; so I'd say it's just a quirk.
+
+  (do
+    (defn honor-reduced
+      [rf]
+      (fn
+        ([])
+        ([o] (rf o))
+        ([acc in]
+         (if (reduced? acc)
+           acc
+           (rf acc in)))))
+
+    [(transduce (xf (gtake 4)) + (reduced 0) [1])
+     (transduce (xf honor-reduced (take 4)) + (reduced 0) [1])
+     (try (transduce (xf (take 4)) + (reduced 0) [1]) (catch ClassCastException e e))])
+
   (do
     (require '[criterium.core :as criterium])
     (let [r (into [] (range 10000000))]
