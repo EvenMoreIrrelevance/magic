@@ -79,11 +79,12 @@
   (when-not (and (= 0 (runit ["git" "diff-index" "--quiet" "--cached" "HEAD" "--"]))
                  (= 0 (runit ["git" "diff-files" "--quiet"])))
     (throw (ex-info "worktree or index not clean" {})))
-  (when-not (= 0 (runit ["git" "tag" (str "v" version)]))
-    (throw (ex-info "version already tagged" {:version version})))
   (jar _)
   (deps-deploy/deploy
    {:artifact jar-file
     :installer :remote
     :sign-releases? false})
+  (runit ["git" "commit" "-am"])
+  (when-not (= 0 (runit ["git" "tag" (str "v" version)]))
+    (throw (ex-info "version already tagged" {:version version})))
   (runit ["git" "push" "origin" "tag" (str "v" version)]))
